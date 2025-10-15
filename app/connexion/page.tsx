@@ -28,7 +28,7 @@ export default function LoginPage() {
         const data = await response.json();
         setError(data.error || 'Identifiants incorrects');
       }
-    } catch (err) {
+    } catch {
       setError('Une erreur est survenue');
     } finally {
       setLoading(false);
@@ -43,7 +43,7 @@ export default function LoginPage() {
             Archivage Factures SCI
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Connectez-vous pour accéder à l'application
+            Connectez-vous pour accéder à l&apos;application
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

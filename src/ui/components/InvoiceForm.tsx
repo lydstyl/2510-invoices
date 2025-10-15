@@ -121,7 +121,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
         const data = await response.json();
         setError(data.error || 'Erreur lors de la création de la facture');
       }
-    } catch (err) {
+    } catch {
       setError('Une erreur est survenue');
     } finally {
       setLoading(false);
@@ -311,7 +311,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
                 Nom de fichier généré
               </label>
               <div className="flex items-center gap-2">
-                <code className="flex-1 bg-white px-3 py-2 rounded text-sm">
+                <code className="flex-1 bg-white px-3 py-2 rounded text-sm text-gray-900">
                   {generatedText}
                 </code>
                 <button

@@ -80,10 +80,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(invoice, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create invoice error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur serveur';
     return NextResponse.json(
-      { error: error.message || 'Erreur serveur' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
