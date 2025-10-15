@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  invoices  Invoice[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  invoices  Invoice[]
+}
+
+enum PaymentStatus {
+  NOT_PAID
+  PARTIALLY_PAID
+  PAID
+}
+
+model Invoice {
+  id                    String        @id @default(cuid())
+  date                  DateTime
+  supplierId            String
+  supplier              Supplier      @relation(fields: [supplierId], references: [id])
+  invoiceNumber         String
+  description           String
+  amount                Float
+  paymentStatus         PaymentStatus @default(NOT_PAID)
+  partialPaymentAmount  Float?
+  partialPaymentDate    DateTime?
+  categoryId            String?
+  category              Category?     @relation(fields: [categoryId], references: [id])
+  filePath              String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@unique([supplierId, invoiceNumber])
+}
