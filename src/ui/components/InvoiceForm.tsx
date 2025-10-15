@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Supplier } from '@/src/domain/entities/Supplier';
 import { Category } from '@/src/domain/entities/Category';
@@ -20,7 +20,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>('');
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: '',
     supplierId: '',
     newSupplierName: '',
     invoiceNumber: '',
@@ -31,6 +31,14 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
     partialPaymentDate: '',
     categoryId: '',
   });
+
+  // Initialize date on client side only to avoid hydration mismatch
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      date: new Date().toISOString().split('T')[0],
+    }));
+  }, []);
 
   const [generatedText, setGeneratedText] = useState('');
 
@@ -121,15 +129,15 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* PDF Preview */}
-      <div className="bg-white rounded-lg shadow p-4">
+    <div className="flex gap-6">
+      {/* PDF Preview - Takes remaining width, max 1400px */}
+      <div className="flex-1 max-w-[1400px] bg-white rounded-lg shadow p-4">
         <h2 className="text-lg font-semibold mb-4">Prévisualisation PDF</h2>
         <PDFPreview url={pdfPreviewUrl} />
       </div>
 
-      {/* Form */}
-      <div className="bg-white rounded-lg shadow p-6">
+      {/* Form - Max width 600px */}
+      <div className="w-full max-w-[600px] bg-white rounded-lg shadow p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -158,7 +166,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               value={formData.date}
               onChange={handleInputChange}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             />
           </div>
 
@@ -171,7 +179,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               value={formData.supplierId}
               onChange={handleInputChange}
               required={!formData.newSupplierName}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             >
               <option value="">Sélectionner un fournisseur</option>
               {suppliers.map((supplier) => (
@@ -186,7 +194,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               value={formData.newSupplierName}
               onChange={handleInputChange}
               placeholder="Ou créer un nouveau fournisseur"
-              className="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             />
           </div>
 
@@ -200,7 +208,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               value={formData.invoiceNumber}
               onChange={handleInputChange}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             />
           </div>
 
@@ -215,7 +223,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               onChange={handleInputChange}
               required
               placeholder="ex: réparation plomberie"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             />
           </div>
 
@@ -229,7 +237,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               step="0.01"
               min="0"
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             />
           </div>
 
@@ -241,7 +249,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               name="paymentStatus"
               value={formData.paymentStatus}
               onChange={handleInputChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             >
               <option value={PaymentStatus.NOT_PAID}>Non payée</option>
               <option value={PaymentStatus.PARTIALLY_PAID}>Partiellement payée</option>
@@ -262,7 +270,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
                   onChange={handleInputChange}
                   step="0.01"
                   min="0"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 />
               </div>
               <div>
@@ -274,7 +282,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
                   name="partialPaymentDate"
                   value={formData.partialPaymentDate}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 />
               </div>
             </>
@@ -286,7 +294,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               name="categoryId"
               value={formData.categoryId}
               onChange={handleInputChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             >
               <option value="">Aucune</option>
               {categories.map((category) => (

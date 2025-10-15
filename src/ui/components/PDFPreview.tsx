@@ -7,14 +7,14 @@ interface PDFPreviewProps {
 export default function PDFPreview({ url }: PDFPreviewProps) {
   if (!url) {
     return (
-      <div className="w-full h-[600px] bg-gray-100 rounded flex items-center justify-center">
+      <div className="w-full h-[calc(100vh-12rem)] min-h-[600px] bg-gray-100 rounded flex items-center justify-center">
         <p className="text-gray-500">Aucun fichier sélectionné</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[600px] bg-gray-100 rounded overflow-hidden">
+    <div className="w-full h-[calc(100vh-12rem)] min-h-[600px] bg-gray-100 rounded overflow-hidden">
       <embed
         src={url}
         type="application/pdf"

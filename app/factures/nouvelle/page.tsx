@@ -23,9 +23,11 @@ export default async function NewInvoicePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Nouvelle facture</h1>
-        <InvoiceForm suppliers={suppliers} categories={categories} />
+      <main className="w-full py-6 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6 w-full max-w-[2100px]">Nouvelle facture</h1>
+        <div className="w-full max-w-[2100px]">
+          <InvoiceForm suppliers={suppliers} categories={categories} />
+        </div>
       </main>
     </div>
   );
