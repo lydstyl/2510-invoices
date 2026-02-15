@@ -2,6 +2,8 @@
 
 import { Invoice } from '@/src/domain/entities/Invoice';
 import Link from 'next/link';
+import { GenerateInvoiceFilename } from '@/src/usecases/GenerateInvoiceFilename';
+import { useState } from 'react';
 
 interface InvoiceListProps {
   invoices: Invoice[];
@@ -20,6 +22,27 @@ const paymentStatusColors = {
 };
 
 export default function InvoiceList({ invoices }: InvoiceListProps) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const generateFilename = new GenerateInvoiceFilename();
+
+  const handleCopyFilename = async (invoice: Invoice) => {
+    const filename = generateFilename.execute({
+      date: new Date(invoice.date),
+      supplierName: invoice.supplier?.name || '',
+      invoiceNumber: invoice.invoiceNumber,
+      description: invoice.description,
+      amount: invoice.amount,
+    });
+
+    try {
+      await navigator.clipboard.writeText(filename);
+      setCopiedId(invoice.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('Erreur lors de la copie:', error);
+    }
+  };
+
   if (invoices.length === 0) {
     return (
       <div className="bg-white shadow rounded-lg p-6 text-center">
@@ -98,6 +121,17 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
                 >
                   Voir PDF
                 </a>
+                <button
+                  onClick={() => handleCopyFilename(invoice)}
+                  className="text-gray-600 hover:text-gray-900 inline-flex items-center"
+                  title="Copier le nom de fichier"
+                >
+                  {copiedId === invoice.id ? (
+                    <span className="text-green-600 text-xs">✓ Copié</span>
+                  ) : (
+                    <span className="text-xs">📋 Copier nom</span>
+                  )}
+                </button>
               </td>
             </tr>
           ))}
