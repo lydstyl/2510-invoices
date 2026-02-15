@@ -91,6 +91,8 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
     }
   };
 
+  const totalMontant = localInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
   if (localInvoices.length === 0) {
     return (
       <div className="bg-white shadow rounded-lg p-6 text-center">
@@ -106,6 +108,19 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
   }
 
   return (
+    <div className="space-y-4">
+      <div className="flex gap-4">
+        <div className="bg-white shadow rounded-lg px-6 py-4 flex items-center gap-3">
+          <span className="text-sm text-gray-500">Nombre de factures</span>
+          <span className="text-2xl font-bold text-gray-900">{localInvoices.length}</span>
+        </div>
+        <div className="bg-white shadow rounded-lg px-6 py-4 flex items-center gap-3">
+          <span className="text-sm text-gray-500">Total TTC</span>
+          <span className="text-2xl font-bold text-gray-900">
+            {totalMontant.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+          </span>
+        </div>
+      </div>
     <div className="bg-white shadow overflow-hidden rounded-lg">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
@@ -203,6 +218,7 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }
