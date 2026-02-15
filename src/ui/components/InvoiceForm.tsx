@@ -110,7 +110,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
       formDataToSend.append('file', pdfFile);
       formDataToSend.append('data', JSON.stringify(formData));
 
-      const response = await fetch('/api/invoices', {
+      const response = await fetch('http://localhost:3000/api/invoices', {
         method: 'POST',
         body: formDataToSend,
       });
