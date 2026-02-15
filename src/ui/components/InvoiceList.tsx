@@ -23,7 +23,55 @@ const paymentStatusColors = {
 
 export default function InvoiceList({ invoices }: InvoiceListProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedVirementId, setCopiedVirementId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [localInvoices, setLocalInvoices] = useState<Invoice[]>(invoices);
   const generateFilename = new GenerateInvoiceFilename();
+
+  const handleDelete = async (invoice: Invoice) => {
+    if (!confirm(`Supprimer la facture "${invoice.invoiceNumber}" de ${invoice.supplier?.name} ?`)) {
+      return;
+    }
+
+    setDeletingId(invoice.id);
+    try {
+      const response = await fetch(`http://localhost:3000/api/invoices/${invoice.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setLocalInvoices((prev) => prev.filter((i) => i.id !== invoice.id));
+      } else {
+        alert('Erreur lors de la suppression');
+      }
+    } catch {
+      alert('Une erreur est survenue');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleCopyVirement = async (invoice: Invoice) => {
+    const filename = generateFilename.execute({
+      date: new Date(invoice.date),
+      supplierName: invoice.supplier?.name || '',
+      invoiceNumber: invoice.invoiceNumber,
+      description: invoice.description,
+      amount: invoice.amount,
+    });
+
+    // Retirer le montant (dernière partie après le dernier ".") et remplacer "." et "_" par des espaces
+    const withoutAmount = filename.replace(/\.[^.]+$/, '');
+    const reference = withoutAmount.replace(/[._]/g, ' ');
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      setCopiedVirementId(invoice.id);
+      setTimeout(() => setCopiedVirementId(null), 2000);
+    } catch (error) {
+      console.error('Erreur lors de la copie:', error);
+    }
+  };
 
   const handleCopyFilename = async (invoice: Invoice) => {
     const filename = generateFilename.execute({
@@ -43,7 +91,7 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
     }
   };
 
-  if (invoices.length === 0) {
+  if (localInvoices.length === 0) {
     return (
       <div className="bg-white shadow rounded-lg p-6 text-center">
         <p className="text-gray-500">Aucune facture enregistrée</p>
@@ -86,7 +134,7 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {invoices.map((invoice) => (
+          {localInvoices.map((invoice) => (
             <tr key={invoice.id} className="hover:bg-gray-50">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {new Date(invoice.date).toLocaleDateString('fr-FR')}
@@ -123,7 +171,7 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
                 </a>
                 <button
                   onClick={() => handleCopyFilename(invoice)}
-                  className="text-gray-600 hover:text-gray-900 inline-flex items-center"
+                  className="text-gray-600 hover:text-gray-900 inline-flex items-center mr-3"
                   title="Copier le nom de fichier"
                 >
                   {copiedId === invoice.id ? (
@@ -131,6 +179,24 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
                   ) : (
                     <span className="text-xs">📋 Copier nom</span>
                   )}
+                </button>
+                <button
+                  onClick={() => handleCopyVirement(invoice)}
+                  className="text-purple-600 hover:text-purple-900 inline-flex items-center mr-3"
+                  title="Copier la référence de virement"
+                >
+                  {copiedVirementId === invoice.id ? (
+                    <span className="text-green-600 text-xs">✓ Copié</span>
+                  ) : (
+                    <span className="text-xs">🏦 Virement</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleDelete(invoice)}
+                  disabled={deletingId === invoice.id}
+                  className="text-red-600 hover:text-red-900 text-xs disabled:opacity-50"
+                >
+                  {deletingId === invoice.id ? 'Suppression...' : 'Supprimer'}
                 </button>
               </td>
             </tr>
