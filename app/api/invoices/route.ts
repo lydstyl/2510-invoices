@@ -22,7 +22,16 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { error: 'Fichier PDF requis' },
+        { error: 'Fichier requis (PDF ou image)' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Type de fichier non supporté. Veuillez sélectionner un PDF ou une image (JPG, PNG).' },
         { status: 400 }
       );
     }

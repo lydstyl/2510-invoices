@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Supplier } from '@/src/domain/entities/Supplier';
 import { Category } from '@/src/domain/entities/Category';
 import { PaymentStatus } from '@/src/domain/entities/Invoice';
-import PDFPreview from './PDFPreview';
+import FilePreview from './FilePreview';
 
 interface InvoiceFormProps {
   suppliers: Supplier[];
@@ -16,8 +16,9 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string>('');
+  const [fileType, setFileType] = useState<string>('');
 
   const [formData, setFormData] = useState({
     date: '',
@@ -75,10 +76,16 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setPdfFile(file);
-      const url = URL.createObjectURL(file);
-      setPdfPreviewUrl(url);
+    if (file) {
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (validTypes.includes(file.type)) {
+        setSelectedFile(file);
+        setFileType(file.type);
+        const url = URL.createObjectURL(file);
+        setFilePreviewUrl(url);
+      } else {
+        setError('Type de fichier non supporté. Veuillez sélectionner un PDF ou une image (JPG, PNG).');
+      }
     }
   };
 
@@ -100,17 +107,17 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
     setLoading(true);
 
     try {
-      if (!pdfFile) {
-        setError('Veuillez sélectionner un fichier PDF');
+      if (!selectedFile) {
+        setError('Veuillez sélectionner un fichier (PDF ou image)');
         setLoading(false);
         return;
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append('file', pdfFile);
+      formDataToSend.append('file', selectedFile);
       formDataToSend.append('data', JSON.stringify(formData));
 
-      const response = await fetch('http://localhost:3000/api/invoices', {
+      const response = await fetch('/api/invoices', {
         method: 'POST',
         body: formDataToSend,
       });
@@ -130,10 +137,10 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
 
   return (
     <div className="flex gap-6">
-      {/* PDF Preview - Takes remaining width, max 1400px */}
+      {/* File Preview - Takes remaining width, max 1400px */}
       <div className="flex-1 max-w-[1400px] bg-white rounded-lg shadow p-4">
-        <h2 className="text-lg font-semibold mb-4">Prévisualisation PDF</h2>
-        <PDFPreview url={pdfPreviewUrl} />
+        <h2 className="text-lg font-semibold mb-4">Prévisualisation</h2>
+        <FilePreview url={filePreviewUrl} fileType={fileType} />
       </div>
 
       {/* Form - Max width 600px */}
@@ -147,11 +154,11 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Fichier PDF *
+              Fichier (PDF ou Image) *
             </label>
             <input
               type="file"
-              accept="application/pdf"
+              accept="application/pdf,image/jpeg,image/jpg,image/png"
               onChange={handleFileChange}
               required
               className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"

@@ -35,7 +35,7 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
 
     setDeletingId(invoice.id);
     try {
-      const response = await fetch(`http://localhost:3000/api/invoices/${invoice.id}`, {
+      const response = await fetch(`/api/invoices/${invoice.id}`, {
         method: 'DELETE',
       });
 
