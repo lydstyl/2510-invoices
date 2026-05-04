@@ -1,0 +1,23 @@
+services:
+  invoices:
+    build: .
+    container_name: 2510-invoices
+    restart: unless-stopped
+    ports:
+      - "3006:3000"
+    volumes:
+      - invoices-data:/app/prisma/data
+      - invoices-uploads:/app/public/uploads/invoices
+    environment:
+      - TZ=Europe/Paris
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/prisma/data/dev.db
+      - USER_EMAIL=lydstyl@gmail.com
+      - USER_PASSWORD=papass
+      - NEXTAUTH_SECRET=invoices-super-secret-key-change-me
+      - NEXTAUTH_URL=http://192.168.3.102:8091
+      - PORT=3000
+
+volumes:
+  invoices-data:
+  invoices-uploads:
