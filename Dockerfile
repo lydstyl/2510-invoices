@@ -23,6 +23,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Install poppler-utils for PDF to image conversion (invoice extraction)
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
+
 # Copy only production deps
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev

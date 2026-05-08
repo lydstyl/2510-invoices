@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Supplier } from '@/src/domain/entities/Supplier';
 import { Category } from '@/src/domain/entities/Category';
 import { PaymentStatus } from '@/src/domain/entities/Invoice';
+import { ExtractedInvoiceData } from '@/src/domain/entities/ExtractedInvoiceData';
 import FilePreview from './FilePreview';
 
 interface InvoiceFormProps {
@@ -19,6 +20,8 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string>('');
   const [fileType, setFileType] = useState<string>('');
+  const [extracting, setExtracting] = useState(false);
+  const [extracted, setExtracted] = useState(false);
 
   const [formData, setFormData] = useState({
     date: '',
@@ -83,9 +86,64 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
         setFileType(file.type);
         const url = URL.createObjectURL(file);
         setFilePreviewUrl(url);
+        setExtracted(false);
+        // Trigger automatic extraction
+        extractInvoiceData(file);
       } else {
         setError('Type de fichier non supporté. Veuillez sélectionner un PDF ou une image (JPG, PNG).');
       }
+    }
+  };
+
+  const extractInvoiceData = async (file: File) => {
+    setExtracting(true);
+    setError('');
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('file', file);
+
+      const response = await fetch('/api/invoices/extract', {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Échec de l'extraction");
+      }
+
+      const result: ExtractedInvoiceData & { supplierId?: string; categoryId?: string } = await response.json();
+
+      console.log('[Extraction] Résultat brut reçu:', JSON.stringify(result, null, 2));
+
+      // Pre-fill form with extracted data
+      setFormData((prev) => {
+        const newState = {
+          ...prev,
+          date: result.date || prev.date,
+          supplierId: result.supplierId || prev.supplierId,
+          newSupplierName: (!result.supplierId && result.supplierName) ? result.supplierName : '',
+          invoiceNumber: result.invoiceNumber || prev.invoiceNumber,
+          description: result.description || prev.description,
+          amount: result.amount > 0 ? String(result.amount) : prev.amount,
+          paymentStatus: result.paymentStatus || prev.paymentStatus,
+          categoryId: result.categoryId || prev.categoryId,
+        };
+        console.log('[Extraction] Nouvel état du formulaire:', JSON.stringify(newState, null, 2));
+        return newState;
+      });
+
+      setExtracted(true);
+
+      // Update generated filename after form is filled
+      setTimeout(updateGeneratedText, 100);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur d'extraction";
+      console.warn('[Extraction] Erreur:', message);
+      setError(`Extraction automatique impossible : ${message}`);
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -164,6 +222,25 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
+
+          {extracting && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded flex items-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Extraction des donnees par IA...
+            </div>
+          )}
+
+          {extracted && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded flex items-center gap-2">
+              <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Donnees extraites automatiquement &mdash; verifiez et corrigez si necessaire avant d&apos;enregistrer.
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Date *</label>
