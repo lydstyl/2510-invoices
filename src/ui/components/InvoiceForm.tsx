@@ -4,16 +4,109 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Supplier } from '@/src/domain/entities/Supplier';
 import { Category } from '@/src/domain/entities/Category';
-import { PaymentStatus } from '@/src/domain/entities/Invoice';
+import { PaymentStatus, Invoice } from '@/src/domain/entities/Invoice';
 import { ExtractedInvoiceData } from '@/src/domain/entities/ExtractedInvoiceData';
+import { copyToClipboard } from '@/src/ui/lib/clipboard';
 import FilePreview from './FilePreview';
+
+interface InvoiceFormState {
+  date: string;
+  supplierId: string;
+  newSupplierName: string;
+  invoiceNumber: string;
+  description: string;
+  amount: string;
+  paymentStatus: PaymentStatus;
+  partialPaymentAmount: string;
+  partialPaymentDate: string;
+  categoryId: string;
+}
+
+const EMPTY_FORM_STATE: InvoiceFormState = {
+  date: '',
+  supplierId: '',
+  newSupplierName: '',
+  invoiceNumber: '',
+  description: '',
+  amount: '',
+  paymentStatus: PaymentStatus.NOT_PAID,
+  partialPaymentAmount: '',
+  partialPaymentDate: '',
+  categoryId: '',
+};
+
+// Date au format yyyy-mm-dd en heure LOCALE (getFullYear/getMonth/getDate) —
+// PAS toISOString qui décale d'un jour en UTC+2.
+function toLocalDateInputValue(date: Date | string): string {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formStateFromInvoice(invoice: Invoice): InvoiceFormState {
+  return {
+    date: toLocalDateInputValue(invoice.date),
+    supplierId: invoice.supplierId,
+    newSupplierName: '',
+    invoiceNumber: invoice.invoiceNumber,
+    description: invoice.description,
+    amount: String(invoice.amount),
+    paymentStatus: invoice.paymentStatus,
+    partialPaymentAmount:
+      invoice.partialPaymentAmount != null
+        ? String(invoice.partialPaymentAmount)
+        : '',
+    partialPaymentDate: invoice.partialPaymentDate
+      ? toLocalDateInputValue(invoice.partialPaymentDate)
+      : '',
+    categoryId: invoice.categoryId ?? '',
+  };
+}
+
+function generateInvoiceText(
+  form: InvoiceFormState,
+  suppliers: Supplier[]
+): string {
+  if (!form.date || !form.invoiceNumber || !form.description || !form.amount) {
+    return '';
+  }
+
+  const supplierName =
+    form.newSupplierName ||
+    suppliers.find((s) => s.id === form.supplierId)?.name ||
+    '';
+
+  if (!supplierName) {
+    return '';
+  }
+
+  const date = new Date(form.date);
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const formattedDate = `${year}${month}${day}`;
+
+  const amount = parseFloat(form.amount);
+  const [integerPart, decimalPart = '00'] = amount.toFixed(2).split('.');
+  const formattedAmount = `${integerPart}E${decimalPart}`;
+
+  return `${formattedDate}.${supplierName}.${form.invoiceNumber}_${form.description}.${formattedAmount}`;
+}
 
 interface InvoiceFormProps {
   suppliers: Supplier[];
   categories: Category[];
+  initialInvoice?: Invoice;
 }
 
-export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps) {
+export default function InvoiceForm({
+  suppliers,
+  categories,
+  initialInvoice,
+}: InvoiceFormProps) {
+  const isEditMode = !!initialInvoice;
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,58 +116,33 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState(false);
 
-  const [formData, setFormData] = useState({
-    date: '',
-    supplierId: '',
-    newSupplierName: '',
-    invoiceNumber: '',
-    description: '',
-    amount: '',
-    paymentStatus: PaymentStatus.NOT_PAID,
-    partialPaymentAmount: '',
-    partialPaymentDate: '',
-    categoryId: '',
-  });
+  const [formData, setFormData] = useState<InvoiceFormState>(() =>
+    initialInvoice ? formStateFromInvoice(initialInvoice) : EMPTY_FORM_STATE
+  );
 
   // Initialize date on client side only to avoid hydration mismatch
+  // (jamais en mode édition : la date initiale vient de la facture)
   useEffect(() => {
+    if (initialInvoice) {
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       date: new Date().toISOString().split('T')[0],
     }));
-  }, []);
+  }, [initialInvoice]);
 
-  const [generatedText, setGeneratedText] = useState('');
+  // En mode édition, le nom de fichier généré est calculé dès l'ouverture
+  const [generatedText, setGeneratedText] = useState(() =>
+    initialInvoice
+      ? generateInvoiceText(formStateFromInvoice(initialInvoice), suppliers)
+      : ''
+  );
+  const [copyTextCopied, setCopyTextCopied] = useState(false);
 
   // Generate filename text
   const updateGeneratedText = () => {
-    if (!formData.date || !formData.invoiceNumber || !formData.description || !formData.amount) {
-      setGeneratedText('');
-      return;
-    }
-
-    const supplierName =
-      formData.newSupplierName ||
-      suppliers.find((s) => s.id === formData.supplierId)?.name ||
-      '';
-
-    if (!supplierName) {
-      setGeneratedText('');
-      return;
-    }
-
-    const date = new Date(formData.date);
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const formattedDate = `${year}${month}${day}`;
-
-    const amount = parseFloat(formData.amount);
-    const [integerPart, decimalPart = '00'] = amount.toFixed(2).split('.');
-    const formattedAmount = `${integerPart}E${decimalPart}`;
-
-    const text = `${formattedDate}.${supplierName}.${formData.invoiceNumber}_${formData.description}.${formattedAmount}`;
-    setGeneratedText(text);
+    setGeneratedText(generateInvoiceText(formData, suppliers));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,8 +223,14 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
     setTimeout(updateGeneratedText, 0);
   };
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(generatedText);
+  const handleCopyText = async () => {
+    const copied = await copyToClipboard(generatedText);
+    if (!copied) {
+      alert('Copie impossible');
+      return;
+    }
+    setCopyTextCopied(true);
+    setTimeout(() => setCopyTextCopied(false), 2000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -165,26 +239,42 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
     setLoading(true);
 
     try {
-      if (!selectedFile) {
-        setError('Veuillez sélectionner un fichier (PDF ou image)');
-        setLoading(false);
-        return;
-      }
+      if (initialInvoice) {
+        // Mode édition : PUT JSON, pas de nouvel upload
+        const response = await fetch(`/api/invoices/${initialInvoice.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
 
-      const formDataToSend = new FormData();
-      formDataToSend.append('file', selectedFile);
-      formDataToSend.append('data', JSON.stringify(formData));
-
-      const response = await fetch('/api/invoices', {
-        method: 'POST',
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        router.push('/factures');
+        if (response.ok) {
+          router.push('/factures');
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Erreur lors de la modification de la facture');
+        }
       } else {
-        const data = await response.json();
-        setError(data.error || 'Erreur lors de la création de la facture');
+        if (!selectedFile) {
+          setError('Veuillez sélectionner un fichier (PDF ou image)');
+          setLoading(false);
+          return;
+        }
+
+        const formDataToSend = new FormData();
+        formDataToSend.append('file', selectedFile);
+        formDataToSend.append('data', JSON.stringify(formData));
+
+        const response = await fetch('/api/invoices', {
+          method: 'POST',
+          body: formDataToSend,
+        });
+
+        if (response.ok) {
+          router.push('/factures');
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Erreur lors de la création de la facture');
+        }
       }
     } catch {
       setError('Une erreur est survenue');
@@ -212,15 +302,21 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Fichier (PDF ou Image) *
+              {isEditMode ? 'Fichier (conservé)' : 'Fichier (PDF ou Image) *'}
             </label>
-            <input
-              type="file"
-              accept="application/pdf,image/jpeg,image/jpg,image/png"
-              onChange={handleFileChange}
-              required
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
+            {isEditMode ? (
+              <p className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-600 break-all">
+                {initialInvoice?.filePath}
+              </p>
+            ) : (
+              <input
+                type="file"
+                accept="application/pdf,image/jpeg,image/jpg,image/png"
+                onChange={handleFileChange}
+                required
+                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+            )}
           </div>
 
           {extracting && (
@@ -403,7 +499,7 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
                   onClick={handleCopyText}
                   className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                 >
-                  Copier
+                  {copyTextCopied ? '✓ Copié' : 'Copier'}
                 </button>
               </div>
             </div>
@@ -415,7 +511,11 @@ export default function InvoiceForm({ suppliers, categories }: InvoiceFormProps)
               disabled={loading}
               className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {loading ? 'Enregistrement...' : 'Enregistrer la facture'}
+              {loading
+                ? 'Enregistrement...'
+                : isEditMode
+                  ? 'Enregistrer les modifications'
+                  : 'Enregistrer la facture'}
             </button>
             <button
               type="button"

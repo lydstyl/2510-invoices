@@ -3,6 +3,7 @@
 import { Invoice } from '@/src/domain/entities/Invoice';
 import Link from 'next/link';
 import { GenerateInvoiceFilename } from '@/src/usecases/GenerateInvoiceFilename';
+import { copyToClipboard } from '@/src/ui/lib/clipboard';
 import { useState } from 'react';
 
 interface InvoiceListProps {
@@ -64,12 +65,12 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
     const withoutAmount = filename.replace(/\.[^.]+$/, '');
     const reference = withoutAmount.replace(/[._]/g, ' ');
 
-    try {
-      await navigator.clipboard.writeText(reference);
+    const copied = await copyToClipboard(reference);
+    if (copied) {
       setCopiedVirementId(invoice.id);
       setTimeout(() => setCopiedVirementId(null), 2000);
-    } catch (error) {
-      console.error('Erreur lors de la copie:', error);
+    } else {
+      alert('Copie impossible');
     }
   };
 
@@ -82,12 +83,12 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
       amount: invoice.amount,
     });
 
-    try {
-      await navigator.clipboard.writeText(filename);
+    const copied = await copyToClipboard(filename);
+    if (copied) {
       setCopiedId(invoice.id);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (error) {
-      console.error('Erreur lors de la copie:', error);
+    } else {
+      alert('Copie impossible');
     }
   };
 
@@ -184,6 +185,12 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
                 >
                   Voir PDF
                 </a>
+                <Link
+                  href={`/factures/${invoice.id}/editer`}
+                  className="text-gray-600 hover:text-gray-900 mr-3"
+                >
+                  Modifier
+                </Link>
                 <button
                   onClick={() => handleCopyFilename(invoice)}
                   className="text-gray-600 hover:text-gray-900 inline-flex items-center mr-3"
